@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INASEP — Contrato de Matrícula</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- jsPDF — generación de PDF en el navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --ink:     #0f0e0d;
+      --paper:   #f5f0e8;
+      --cream:   #ede7d6;
+      --gold:    #b8912a;
+      --gold-lt: #d4aa4a;
+      --red:     #8b1a1a;
+      --gray:    #6b6560;
+      --border:  #c8bfad;
+      --ok:      #1a5c35;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--ink); color: var(--paper);
+      padding: 1.4rem 2rem; display: flex; align-items: center; gap: 1.25rem;
+      border-bottom: 3px solid var(--gold);
+    }
+    .logo { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--gold); letter-spacing: .05em; }
+    .hdr h1 { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; }
+    .hdr p  { font-size: .72rem; color: var(--border); font-family: 'IBM Plex Mono', monospace; margin-top: .2rem; }
+
+    /* LAYOUT */
+    main { flex: 1; max-width: 820px; width: 100%; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+    /* STEPS */
+    .steps { display: flex; align-items: center; margin-bottom: 2.5rem; }
+    .step  { display: flex; align-items: center; gap: .45rem; }
+    .snum {
+      width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'IBM Plex Mono', monospace; font-size: .72rem; font-weight: 500;
+      color: var(--gray); background: var(--paper); flex-shrink: 0; transition: all .3s;
+    }
+    .slbl { font-size: .7rem; font-weight: 500; color: var(--gray); text-transform: uppercase; letter-spacing: .06em; transition: color .3s; white-space: nowrap; }
+    .sline { flex: 1; height: 1px; background: var(--border); margin: 0 .5rem; }
+    .step.active .snum { background: var(--gold); border-color: var(--gold); color: #fff; }
+    .step.active .slbl { color: var(--ink); font-weight: 600; }
+    .step.done   .snum { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .step.done   .snum span { display: none; }
+    .step.done   .snum::after { content: "✓"; }
+
+    /* PANELS */
+    .panel { background: #fff; border: 1px solid var(--border); border-radius: 3px; padding: 2rem; margin-bottom: 1.5rem; display: none; animation: fadein .3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadein { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+    .ptitle { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 600; margin-bottom: .35rem; }
+    .psub   { font-size: .82rem; color: var(--gray); line-height: 1.55; margin-bottom: 1.5rem; }
+
+    /* FORM */
+    .field { margin-bottom: 1.2rem; }
+    label  { display: block; font-size: .74rem; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--gray); margin-bottom: .35rem; }
+    input[type=text], input[type=email], input[type=tel], input[type=date] {
+      width: 100%; padding: .7rem 1rem;
+      border: 1px solid var(--border); border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace; font-size: .88rem;
+      color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s;
+    }
+    input:focus  { border-color: var(--gold); background: #fff; }
+    input[readonly] { background: var(--cream); color: var(--gray); cursor: not-allowed; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .hint { font-size: .71rem; color: var(--gray); margin-top: .28rem; }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: .45rem; padding: .78rem 1.9rem; border: none; border-radius: 2px; font-family: 'IBM Plex Sans', sans-serif; font-size: .84rem; font-weight: 500; letter-spacing: .03em; cursor: pointer; transition: all .2s; }
+    .btn-dark { background: var(--ink); color: var(--paper); }
+    .btn-dark:hover { background: #2a2520; }
+    .btn-dark:disabled { background: var(--border); cursor: not-allowed; }
+    .btn-gold { background: var(--gold); color: #fff; }
+    .btn-gold:hover { background: var(--gold-lt); }
+    .btn-gold:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* PDF VIEWER */
+    .pdf-wrap { border: 1px solid var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 1.25rem; }
+    .pdf-wrap iframe { display: block; width: 100%; height: 520px; border: none; }
+    .pdf-placeholder {
+      height: 180px; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: .6rem; background: var(--cream);
+    }
+    .pdf-placeholder .icon { font-size: 2.2rem; }
+    .pdf-placeholder p { font-size: .78rem; color: var(--gray); text-align: center; line-height: 1.6; }
+
+    /* PDF.js viewer */
+    #pdfViewer {
+      width: 100%; background: var(--cream);
+      display: flex; flex-direction: column; align-items: center;
+      padding: .75rem .5rem; gap: .75rem;
+    }
+    #pdfViewer canvas {
+      width: 100% !important; height: auto !important;
+      max-width: 760px; display: block;
+      box-shadow: 0 1px 6px rgba(0,0,0,.12);
+    }
+    .pdf-nav {
+      display: flex; align-items: center; gap: .75rem;
+      font-family: 'IBM Plex Mono', monospace; font-size: .75rem; color: var(--gray);
+    }
+    .pdf-nav button {
+      background: var(--ink); color: var(--paper); border: none; border-radius: 2px;
+      padding: .35rem .85rem; font-size: .75rem; cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+    }
+    .pdf-nav button:disabled { background: var(--border); cursor: not-allowed; }
+    .pdf-loading {
+      padding: 2rem; text-align: center; font-size: .78rem;
+      color: var(--gray); font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* CAMPOS DEL CONTRATO */
+    .contract-fields {
+      border: 1px solid var(--border); border-radius: 2px; background: var(--paper);
+      padding: 1.5rem 1.75rem; margin-bottom: 1.25rem;
+    }
+    .contract-fields h4 {
+      font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 600;
+      margin-bottom: .6rem; padding-bottom: .5rem; border-bottom: 1px solid var(--cream);
+      color: var(--gold);
+    }
+    .contract-fields > p { font-size: .78rem; color: var(--gray); margin-bottom: 1rem; line-height: 1.5; }
+
+    /* PIE DE FIRMA PREVIEW */
+    .firma-preview {
+      border: 1px solid var(--border); border-radius: 2px; background: #fff;
+      padding: 1.25rem 1.5rem; margin: 1rem 0 1.25rem;
+    }
+    .fp-title {
+      font-family: 'IBM Plex Mono', monospace; font-size: .67rem; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--gray); margin-bottom: .75rem;
+      border-bottom: 1px dashed var(--border); padding-bottom: .4rem;
+    }
+    .fp-grid { display: grid; grid-template-columns: 130px 1fr; gap: .4rem .75rem; align-items: baseline; }
+    .fp-key  { font-size: .74rem; color: var(--gray); font-weight: 500; }
+    .fp-val  {
+      font-family: 'Playfair Display', serif; font-size: .9rem; color: var(--ink);
+      font-style: italic; border-bottom: 1px solid var(--border); padding-bottom: 2px;
+    }
+    .fp-empty { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--border); font-style: normal; }
+
+    /* CONSENTIMIENTOS */
+    .consent-list { list-style: none; margin-bottom: 1.5rem; }
+    .ci { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 0; border-bottom: 1px solid var(--cream); font-size: .83rem; line-height: 1.55; }
+    .ci:last-child { border-bottom: none; }
+    .ci input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--gold); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+    .ci label { text-transform: none; letter-spacing: 0; font-weight: 400; cursor: pointer; }
+
+    /* CHECKBOX VALIDACIÓN FINAL */
+    .val-box {
+      border: 2px solid var(--border); border-radius: 3px; padding: 1.5rem;
+      background: var(--paper); margin-bottom: 1.5rem; transition: border-color .3s, background .3s;
+    }
+    .val-box.checked { border-color: var(--ok); background: #f0faf4; }
+    .val-inner { display: flex; align-items: flex-start; gap: 1rem; }
+    .val-inner input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--ok); flex-shrink: 0; margin-top: 3px; cursor: pointer; }
+    .val-text strong { display: block; font-size: .9rem; margin-bottom: .35rem; }
+    .val-text p { font-size: .78rem; color: var(--gray); line-height: 1.6; }
+
+    /* CÓDIGO */
+    .code-display {
+      font-family: 'IBM Plex Mono', monospace; background: var(--ink); color: var(--gold-lt);
+      padding: 1.25rem 1.5rem; border-radius: 2px; font-size: .79rem; line-height: 2; margin-bottom: 1.5rem;
+    }
+    .code-display .k { color: var(--border); }
+    .code-display .v { color: #e8dcc8; }
+    .code-display .h { color: var(--gold-lt); font-weight: 600; }
+
+    /* SUCCESS */
+    .spanel { text-align: center; }
+    .sicon { width: 62px; height: 62px; background: var(--ok); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.7rem; color: #fff; }
+
+    /* PDF DOWNLOAD */
+    .pdf-actions { display: flex; gap: .85rem; justify-content: center; flex-wrap: wrap; margin: 1.5rem 0 .5rem; }
+    .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+    .btn-outline:hover { background: var(--gold); color: #fff; }
+    .pdf-note { font-size: .72rem; color: var(--gray); margin-top: .5rem; font-family: 'IBM Plex Mono', monospace; }
+
+    /* ALERTS */
+    .alert { padding: .75rem 1rem; border-radius: 2px; font-size: .8rem; margin-bottom: 1rem; display: none; }
+    .alert.show { display: block; }
+    .aerr { background: #fde8e8; border-left: 3px solid var(--red); color: var(--red); }
+
+    /* SPINNER */
+    .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: rot .7s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* FOOTER */
+    footer { text-align: center; padding: 1.4rem; font-size: .7rem; font-family: 'IBM Plex Mono', monospace; color: var(--gray); border-top: 1px solid var(--border); }
+
+    @media (max-width: 600px) {
+      .row2 { grid-template-columns: 1fr; }
+      .slbl { display: none; }
+      main  { padding: 1.5rem 1rem 3.5rem; }
+      .fp-grid { grid-template-columns: 110px 1fr; }
+      .pdf-wrap iframe { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">I</div>
+  <div class="hdr">
+    <h1>INASEP — Contrato de Matrícula</h1>
+    <p>Plataforma de firma electrónica · Registro auditado · Ley N° 19.799</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="st1"><div class="snum"><span>1</span></div><div class="slbl">Contacto</div></div>
+    <div class="sline"></div>
+    <div class="step" id="st2"><div class="snum"><span>2</span></div><div class="slbl">Contrato</div></div>
+    <div class="sline"></div>
+    <div class="step" id="st3"><div class="snum"><span>3</span></div><div class="slbl">Asentimiento</div></div>
+    <div class="sline"></div>
+    <div class="step" id="st4"><div class="snum"><span>4</span></div><div class="slbl">Validación</div></div>
+    <div class="sline"></div>
+    <div class="step" id="st5"><div class="snum"><span>5</span></div><div class="slbl">Confirmado</div></div>
+  </div>
+
+  <!-- ══════════════ PANEL 1 — CONTACTO ══════════════ -->
+  <div class="panel active" id="p1">
+    <div class="ptitle">Verificación de contacto</div>
+    <p class="psub">
+      Ingresa tu correo electrónico <strong>o</strong> número de teléfono. Estos datos quedarán
+      vinculados como código de verificación en el contrato y en la copia de respaldo de INASEP.
+      Ambos campos son OBLIGATORIOS.
+    </p>
+
+    <div id="al1" class="alert aerr"></div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Correo electrónico</label>
+        <input type="email" id="f-email" placeholder="alumno@correo.cl" />
+        <div class="hint">Recomendado — recibirás tu comprobante</div>
+      </div>
+      <div class="field">
+        <label>Teléfono / WhatsApp</label>
+        <input type="tel" id="f-tel" placeholder="+56 9 XXXX XXXX" />
+        <div class="hint">Con código de país</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Programa / Curso al que se inscribe</label>
+      <input type="text" id="f-prog" placeholder="Ej: Curso Formación GG.SS" />
+    </div>
+
+    <button class="btn btn-dark" onclick="paso1()">Continuar →</button>
+  </div>
+
+  <!-- ══════════════ PANEL 2 — DATOS DEL CONTRATO ══════════════ -->
+  <div class="panel" id="p2">
+    <div class="ptitle">Completa los datos del contrato</div>
+    <p class="psub">
+      Ingresa los campos a continuación tal como deben quedar en el contrato.
+      El pie de firma se autocompletará en tiempo real para que puedas verificar antes de continuar.
+    </p>
+
+    <div id="al2" class="alert aerr"></div>
+
+    <div class="contract-fields">
+      <h4>📝 Datos que forman parte del instrumento legal</h4>
+      <p>Escribe exactamente como aparece en tu documento de identidad. Estos datos se incorporan al contrato.</p>
+
+      <div class="row2">
+        <div class="field">
+          <label>Fecha del contrato</label>
+          <input type="date" id="f-fecha" oninput="actualizarPie()" />
+          <div class="hint">Fecha en que se suscribe el documento</div>
+        </div>
+        <div class="field">
+          <label>Programa (confirmado)</label>
+          <input type="text" id="f-prog2" readonly />
+          <div class="hint">Completado desde el paso anterior</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nombre completo</label>
+        <input type="text" id="f-nombre"
+               placeholder="Escribe tu nombre completo como aparece en tu cédula"
+               oninput="actualizarPie()" />
+        <div class="hint">Tal como figura en tu cédula de identidad chilena</div>
+      </div>
+
+      <div class="field">
+        <label>RUT</label>
+        <input type="text" id="f-rut"
+               placeholder="12.345.678-9"
+               oninput="fmtRut(this); actualizarPie()" maxlength="13" />
+        <div class="hint">Con puntos y guión — Ej: 12.345.678-9</div>
+      </div>
+    </div>
+
+    <!-- PIE DE FIRMA — autocompletado -->
+    <div class="firma-preview">
+      <div class="fp-title">Vista previa — Pie de firma del contrato (se actualiza automáticamente)</div>
+      <div class="fp-grid">
+        <span class="fp-key">Nombre:</span>
+        <span class="fp-val" id="pv-nombre"><span class="fp-empty">— ingresa tu nombre —</span></span>
+
+        <span class="fp-key">RUT:</span>
+        <span class="fp-val" id="pv-rut"><span class="fp-empty">— ingresa tu RUT —</span></span>
+
+        <span class="fp-key">Fecha:</span>
+        <span class="fp-val" id="pv-fecha"><span class="fp-empty">— selecciona la fecha —</span></span>
+
+        <span class="fp-key">Programa:</span>
+        <span class="fp-val" id="pv-prog"><span class="fp-empty">—</span></span>
+      </div>
+    </div>
+
+    <!-- PDF DEL CONTRATO — PDF.js (funciona en móvil y escritorio) -->
+    <p style="font-size:.78rem;color:var(--gray);margin-bottom:.6rem;font-weight:600;">
+      📄 Documento — Contrato de Matrícula INASEP
+    </p>
+    <div class="pdf-wrap">
+      <div id="pdfViewer">
+        <div class="pdf-loading" id="pdfLoading">⏳ Cargando contrato…</div>
+      </div>
+    </div>
+
+    <button class="btn btn-dark" onclick="paso2()">He completado los campos — Continuar →</button>
+  </div>
+
+  <!-- ══════════════ PANEL 3 — ASENTIMIENTO ══════════════ -->
+  <div class="panel" id="p3">
+    <div class="ptitle">Declaración de asentimiento expreso</div>
+    <p class="psub">
+      Marca cada declaración de forma individual. Todas son obligatorias y quedarán
+      registradas en el historial de auditoría de este contrato.
+    </p>
+
+    <div id="al3" class="alert aerr"></div>
+
+    <ul class="consent-list">
+      <li class="ci">
+        <input type="checkbox" id="c1" onchange="chkC()">
+        <label for="c1">Declaro haber leído íntegramente el contrato de matrícula y comprendo todas sus cláusulas, condiciones y obligaciones.</label>
+      </li>
+      <li class="ci">
+        <input type="checkbox" id="c2" onchange="chkC()">
+        <label for="c2">Acepto y consiento de manera expresa los términos económicos, académicos y reglamentarios establecidos en el contrato.</label>
+      </li>
+      <li class="ci">
+        <input type="checkbox" id="c3" onchange="chkC()">
+        <label for="c3">Autorizo a INASEP el tratamiento de mis datos personales conforme a la <strong>Ley N° 19.628</strong>, exclusivamente para fines académicos y administrativos.</label>
+      </li>
+      <li class="ci">
+        <input type="checkbox" id="c4" onchange="chkC()">
+        <label for="c4">Entiendo que la validación electrónica que realizaré tiene plena fuerza legal equivalente a una firma manuscrita, conforme a la <strong>Ley N° 19.799 sobre Firma Electrónica</strong>.</label>
+      </li>
+      <li class="ci">
+        <input type="checkbox" id="c5" onchange="chkC()">
+        <label for="c5">Confirmo que los datos personales ingresados (nombre, RUT, fecha, contacto) son verídicos y corresponden a mi identidad.</label>
+      </li>
+    </ul>
+
+    <button class="btn btn-dark" id="btn3" onclick="paso3()" disabled>
+      Confirmar asentimiento — Continuar →
+    </button>
+  </div>
+
+  <!-- ══════════════ PANEL 4 — VALIDACIÓN ══════════════ -->
+  <div class="panel" id="p4">
+    <div class="ptitle">Validación expresa del contrato</div>
+    <p class="psub">
+      Revisa el resumen de tu contrato y marca la casilla de validación para suscribirlo.
+      Esta acción tiene plena validez legal y equivale a una firma manuscrita.
+    </p>
+
+    <div id="al4" class="alert aerr"></div>
+
+    <!-- Resumen previo a la validación -->
+    <div class="firma-preview" style="margin-bottom:1.25rem;">
+      <div class="fp-title">Resumen del contrato que estás suscribiendo</div>
+      <div class="fp-grid" id="resumenGrid"></div>
+    </div>
+
+    <!-- ★ CHECKBOX DE VALIDACIÓN EXPRESA ★ -->
+    <div class="val-box" id="valBox">
+      <div class="val-inner">
+        <input type="checkbox" id="chkVal" onchange="toggleVal()" />
+        <div class="val-text">
+          <strong>Valido y suscribo el presente Contrato de Matrícula</strong>
+          <p>
+            Al marcar esta casilla, yo — <strong id="vb-nombre">—</strong>,
+            RUT <strong id="vb-rut">—</strong> — declaro que he leído, comprendido y acepto
+            íntegramente las condiciones del Contrato de Matrícula de INASEP. Entiendo que esta
+            acción produce los mismos efectos jurídicos que una firma manuscrita conforme a la
+            <strong>Ley N° 19.799</strong>, y que quedará registrada con marca de tiempo,
+            dirección IP, código único de contrato y hash de integridad como elementos de
+            identificación inequívoca de mi voluntad.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" id="btn4" onclick="procesarContrato()" disabled>
+      <span id="btn4txt">Confirmar y registrar contrato →</span>
+    </button>
+  </div>
+
+  <!-- ══════════════ PANEL 5 — CONFIRMACIÓN ══════════════ -->
+  <div class="panel spanel" id="p5">
+    <div class="sicon">✓</div>
+    <div class="ptitle">Contrato registrado exitosamente</div>
+    <p class="psub" style="max-width:480px;margin:0 auto 1.75rem;">
+      Tu contrato ha sido suscrito con validez legal y respaldado de forma segura en los servidores de INASEP.
+      Se ha enviado notificación a <strong>coordinacion@inasep.cl</strong>.
+      Guarda tu código de contrato.
+    </p>
+    <div class="code-display" id="summaryBlock"></div>
+
+    <!-- Acciones PDF -->
+    <div class="pdf-actions">
+      <button class="btn btn-gold" id="btnDescargaPDF" onclick="descargarPDF()">
+        📄 Descargar comprobante PDF
+      </button>
+    </div>
+    <div id="emailPDFStatus" class="pdf-note" style="display:none;"></div>
+
+    <p style="font-size:.76rem;color:var(--gray);margin-top:1.25rem;line-height:1.6;">
+      Este código es tu comprobante. INASEP conserva la copia auditada completa, incluyendo
+      metadatos de sesión y hash de integridad, en sus sistemas de respaldo.
+    </p>
+  </div>
+
+</main>
+
+<footer>
+  INASEP · Firma Electrónica · Ley N° 19.799 · Ley N° 19.628 · Ley N° 19.496 · Chile
+  &nbsp;|&nbsp; <span id="yr"></span>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════════════ */
+const S = {
+  email:'', tel:'', prog:'',
+  fecha:'', nombre:'', rut:'',
+  contratoId:'', timestamp:'', ip:''
+};
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+/* ═══════════════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════════════ */
+function genId() {
+  return 'INS-' + Date.now().toString(36).toUpperCase()
+       + '-' + Math.random().toString(36).substr(2,5).toUpperCase()
+       + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+}
+
+async function getIP() {
+  try { return (await (await fetch('https://api.ipify.org?format=json')).json()).ip || 'N/D'; }
+  catch { return 'N/D'; }
+}
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function fechaLarga(iso) {
+  const [y,m,d] = iso.split('-');
+  return `${parseInt(d)} de ${MESES[parseInt(m)-1]} de ${y}`;
+}
+
+function showAl(id, msg) { const e=document.getElementById(id); e.textContent=msg; e.classList.add('show'); }
+function hideAl(id)      { document.getElementById(id).classList.remove('show'); }
+
+function setStep(n) {
+  for (let i=1; i<=5; i++) {
+    const s = document.getElementById('st'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    if (i === n) s.classList.add('active');
+    document.getElementById('p'+i).classList.remove('active');
+  }
+  document.getElementById('p'+n).classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* Formato RUT chileno */
+function fmtRut(el) {
+  let v = el.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if (v.length > 1)
+    v = v.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.') + '-' + v.slice(-1);
+  el.value = v;
+}
+
+/* Autocompletado pie de firma */
+function actualizarPie() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const rut    = document.getElementById('f-rut').value.trim();
+  const fecha  = document.getElementById('f-fecha').value;
+  const prog   = document.getElementById('f-prog2').value.trim();
+
+  const set = (id, val, ph) => {
+    document.getElementById(id).innerHTML = val
+      ? val
+      : `<span class="fp-empty">${ph}</span>`;
+  };
+
+  set('pv-nombre', nombre, '— ingresa tu nombre —');
+  set('pv-rut',    rut,    '— ingresa tu RUT —');
+  set('pv-prog',   prog,   '—');
+  set('pv-fecha',  fecha ? fechaLarga(fecha) : '', '— selecciona la fecha —');
+}
+
+/* ═══════════════════════════════════════════════════
+   PASO 1 — CONTACTO
+═══════════════════════════════════════════════════ */
+function paso1() {
+  hideAl('al1');
+  const email = document.getElementById('f-email').value.trim();
+  const tel   = document.getElementById('f-tel').value.trim();
+  const prog  = document.getElementById('f-prog').value.trim();
+
+  if (!prog) { showAl('al1','El programa / curso es obligatorio.'); return; }
+  if (!email && !tel) { showAl('al1','Debes ingresar al menos un correo electrónico o número de teléfono.'); return; }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showAl('al1','El correo electrónico no tiene un formato válido.'); return; }
+
+  S.email = email;
+  S.tel   = tel;
+  S.prog  = prog;
+
+  document.getElementById('f-prog2').value = prog;
+  document.getElementById('f-fecha').valueAsDate = new Date();
+  actualizarPie();
+  setStep(2);
+}
+
+/* ═══════════════════════════════════════════════════
+   PASO 2 — DATOS DEL CONTRATO
+═══════════════════════════════════════════════════ */
+function paso2() {
+  hideAl('al2');
+  const fecha  = document.getElementById('f-fecha').value;
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const rut    = document.getElementById('f-rut').value.trim();
+
+  if (!fecha)           { showAl('al2','Debes seleccionar la fecha del contrato.'); return; }
+  if (!nombre)          { showAl('al2','El nombre completo es obligatorio.'); return; }
+  if (!rut || rut.length < 9) { showAl('al2','Ingresa un RUT válido (con puntos y guión).'); return; }
+
+  S.fecha  = fecha;
+  S.nombre = nombre;
+  S.rut    = rut;
+
+  setStep(3);
+}
+
+/* ═══════════════════════════════════════════════════
+   PASO 3 — ASENTIMIENTO
+═══════════════════════════════════════════════════ */
+function chkC() {
+  const ok = ['c1','c2','c3','c4','c5'].every(id => document.getElementById(id).checked);
+  document.getElementById('btn3').disabled = !ok;
+}
+
+function paso3() {
+  const ok = ['c1','c2','c3','c4','c5'].every(id => document.getElementById(id).checked);
+  if (!ok) { showAl('al3','Debes marcar todas las declaraciones para continuar.'); return; }
+  hideAl('al3');
+
+  // Rellenar resumen panel 4
+  document.getElementById('resumenGrid').innerHTML = `
+    <span class="fp-key">Nombre:</span>   <span class="fp-val">${S.nombre}</span>
+    <span class="fp-key">RUT:</span>      <span class="fp-val">${S.rut}</span>
+    <span class="fp-key">Fecha:</span>    <span class="fp-val">${fechaLarga(S.fecha)}</span>
+    <span class="fp-key">Programa:</span> <span class="fp-val">${S.prog}</span>
+    <span class="fp-key">Correo:</span>   <span class="fp-val">${S.email||'—'}</span>
+    <span class="fp-key">Teléfono:</span> <span class="fp-val">${S.tel||'—'}</span>
+  `;
+  document.getElementById('vb-nombre').textContent = S.nombre;
+  document.getElementById('vb-rut').textContent    = S.rut;
+  setStep(4);
+}
+
+/* ═══════════════════════════════════════════════════
+   PASO 4 — VALIDACIÓN CHECKBOX
+═══════════════════════════════════════════════════ */
+function toggleVal() {
+  const checked = document.getElementById('chkVal').checked;
+  document.getElementById('valBox').classList.toggle('checked', checked);
+  document.getElementById('btn4').disabled = !checked;
+}
+
+/* ═══════════════════════════════════════════════════
+   CONFIGURACIÓN DEL WORKER  ← reemplaza con tu URL
+═══════════════════════════════════════════════════ */
+const WORKER_URL = 'https://inasep-email-worker.inasep.workers.dev/';
+
+/* ═══════════════════════════════════════════════════
+   LOGO INASEP embebido (base64, JPEG 120×120)
+═══════════════════════════════════════════════════ */
+const LOGO_B64 = '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';
+
+/* ═══════════════════════════════════════════════════
+   GENERACIÓN DE PDF — jsPDF  (liviano, con logo)
+═══════════════════════════════════════════════════ */
+let _pdfBase64 = null;
+
+function generarPDF(registro, integridad) {
+  const { jsPDF } = window.jspdf;
+  const doc  = new jsPDF({ unit: 'mm', format: 'letter' });
+  const W    = doc.internal.pageSize.getWidth();   // 215.9 mm
+  const H    = doc.internal.pageSize.getHeight();  // 279.4 mm
+  const M    = 15;   // margen lateral
+  const CW   = W - M * 2;  // ancho de contenido = 185.9 mm
+  let   y    = 0;
+
+  /* ── Paleta corporativa INASEP ── */
+  const GREEN_DARK = [26, 71, 52];    // #1A4734 — verde oscuro header
+  const GREEN_MED  = [43, 100, 72];   // #2B6448 — verde medio
+  const GOLD       = [184, 145, 42];  // #B8912A
+  const GOLD_LT    = [212, 170, 74];  // acento dorado
+  const WHITE      = [255, 255, 255];
+  const INK        = [15,  14,  13];
+  const GRAY       = [90,  90,  90];
+  const GRAY_LT    = [150, 150, 150];
+  const CREAM      = [249, 246, 240];
+  const BORDER_C   = [200, 191, 173];
+  const GREEN_OK   = [26, 92, 53];
+
+  /* ════════════════════════════════════════════════
+     PÁGINA 1 — CONTRATO (replica el PDF original)
+  ════════════════════════════════════════════════ */
+
+  /* ── Helper: header repetible por página ── */
+  function drawHeader(subtitulo) {
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.4);
+    doc.rect(5, 5, W - 10, H - 10);
+    doc.setFillColor(...GREEN_DARK);
+    doc.rect(5, 5, W - 10, 23, 'F');
+    try { doc.addImage('data:image/jpeg;base64,' + LOGO_B64, 'JPEG', M, 8, 15, 15); } catch(e) {}
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text('INASEP SpA', M + 20, 15);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.text(subtitulo, M + 20, 22);
+    doc.setFontSize(6.5); doc.setTextColor(...GOLD_LT);
+    doc.text('RUT: 77.776.479-9', W - M, 12, {align:'right'});
+    doc.text('Aníbal Pinto 875 Of. C, Quilpué', W - M, 18, {align:'right'});
+    doc.text('www.inasep.cl · instituto@inasep.cl', W - M, 24, {align:'right'});
+    doc.setFillColor(...GOLD);
+    doc.rect(5, 28, W - 10, 0.8, 'F');
+  }
+
+  function drawFooter(texto) {
+    doc.setFillColor(...GREEN_DARK);
+    doc.rect(5, H - 13, W - 10, 8, 'F');
+    doc.setTextColor(...GOLD_LT);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+    doc.text(texto, W / 2, H - 8, {align: 'center'});
+  }
+
+  /* ════════════════════════════════════════════════
+     PÁGINA 1 — CONTRATO (replica el PDF original)
+  ════════════════════════════════════════════════ */
+  drawHeader('Instituto de Capacitación en Seguridad Privada');
+  y = 36;
+
+  /* ── Título del contrato ── */
+  doc.setFillColor(...GREEN_DARK);
+  doc.rect(M, y, CW, 22, 'F');
+  doc.setFillColor(...GOLD);
+  doc.rect(M, y + 22, CW, 0.6, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('CONTRATO DE SERVICIO DE CAPACITACIÓN', W / 2, y + 10, {align: 'center'});
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.setTextColor(...GOLD_LT);
+  doc.text('Curso Formación Guardia de Seguridad · 2026', W / 2, y + 18, {align: 'center'});
+  y += 29;
+
+  /* ── Párrafo introductorio ── */
+  doc.setTextColor(...INK);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.3);
+  const intro = `En Quilpué, entre INASEP SpA, RUT 77.776.479-9, Organismo Técnico de Capacitación (OTEC) representado por Elizabeth Magaly Orellana Pizarro, cédula N° 16.477.869-K, domiciliada en Aníbal Pinto 875 Oficina C, Quilpué (en adelante el "OTEC"); y ${registro.nombre}, RUT ${registro.rut} (en adelante el "ALUMNO"), se conviene:`;
+  const introLines = doc.splitTextToSize(intro, CW);
+  doc.text(introLines, M, y);
+  y += introLines.length * 4.4 + 5;
+
+  /* ── Helper: cláusula ── */
+  function seccion(numero, titulo, cuerpo) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+    doc.setTextColor(...GREEN_DARK);
+    doc.text(numero + '.  ' + titulo, M, y);
+    doc.setFillColor(...GOLD);
+    doc.rect(M, y + 1.5, CW, 0.3, 'F');
+    y += 6;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.1);
+    doc.setTextColor(...INK);
+    const lines = doc.splitTextToSize(cuerpo, CW);
+    doc.text(lines, M, y);
+    y += lines.length * 4.2 + 4;
+  }
+
+  seccion('1', 'OBJETO',
+    'El OTEC impartirá al Alumno el Curso de Formación Guardia de Seguridad Privada (90 horas, 10 a 12 días), en las fechas, horarios y lugar comunicados a través de los canales oficiales de INASEP. El OTEC podrá ajustar dichos parámetros con hasta dos semanas de anticipación, notificando oportunamente al Alumno. Horario: Lunes a Viernes 09:15–17:30 hrs. Sábados con horario variable.');
+  seccion('2', 'PRECIO Y FORMA DE PAGO',
+    'El Alumno pagará la suma de $120.000 (ciento veinte mil pesos) al contado, al momento de la inscripción. Formas de pago aceptadas: transferencia bancaria, depósito o efectivo. Datos bancarios: INASEP SpA · Banco de Chile · Cuenta Corriente N° 00-149-13554-08 · RUT 77.776.479-9. Adjuntar comprobante indicando nombre completo y curso a: instituto@inasep.cl');
+  seccion('3', 'ASISTENCIA Y PERMANENCIA',
+    'El Alumno deberá mantener una asistencia mínima del 80% por módulo. El incumplimiento faculta al OTEC para retirarlo del programa sin derecho a reembolso e informar su situación a la Subsecretaría de Prevención del Delito.');
+  seccion('4', 'RESPONSABILIDADES DEL OTEC',
+    'INASEP SpA se obliga a: (a) impartir los módulos del programa; (b) proveer los materiales de estudio en formato digital; y (c) emitir el Certificado de Asistencia al finalizar el curso y remitirlo a la Subsecretaría de Prevención del Delito. Los plazos de examinación, calificación y emisión de la credencial son responsabilidad exclusiva de la Subsecretaría de Prevención del Delito / OS10, siendo ajenos a este OTEC.');
+  seccion('5', 'RESPONSABILIDADES DEL ALUMNO',
+    'La obtención de la Credencial de Guardia de Seguridad depende exclusivamente del Alumno e incluye: (a) cumplir con la asistencia mínima; (b) aprobar el examen ante OS10; y (c) cargar y gestionar personalmente la documentación requerida en la plataforma de la Subsecretaría de Prevención del Delito. El Alumno declara que toda documentación presentada es auténtica y vigente, liberando a INASEP SpA de toda responsabilidad ante observaciones u objeciones.');
+
+  /* ── Bloque firma electrónica ── */
+  doc.setFillColor(238, 245, 241);
+  doc.setDrawColor(...GREEN_DARK); doc.setLineWidth(0.6);
+  doc.rect(M, y, CW, 28, 'FD');
+  doc.setTextColor(...GREEN_DARK);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text('✦  ACEPTACIÓN MEDIANTE FIRMA ELECTRÓNICA', M + 4, y + 7);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  doc.setTextColor(...INK);
+  const firmaText = 'Al continuar con el proceso de inscripción en la plataforma INASEP, el Alumno otorga su asentimiento expreso al presente contrato con plena validez legal, equivalente a una firma manuscrita. El sistema registrará automáticamente: nombre, RUT, correo, dirección IP, fecha y hora de aceptación, y generará un código único de contrato con hash SHA-256 de integridad. Todo ello conforme a la Ley N° 19.799 sobre Documentos Electrónicos y Firma Electrónica.';
+  const firmaLines = doc.splitTextToSize(firmaText, CW - 8);
+  doc.text(firmaLines, M + 4, y + 14);
+
+  drawFooter('INASEP SpA · Ley N° 19.799 · Ley N° 19.628 · Chile 2026');
+
+  /* ════════════════════════════════════════════════
+     PÁGINA 2 — DOCUMENTOS REQUERIDOS
+  ════════════════════════════════════════════════ */
+  doc.addPage();
+  drawHeader('Instituto de Capacitación en Seguridad Privada');
+  y = 36;
+
+  /* ── Tabla documentos inscripción ── */
+  function tablaDocumentos(titulo, items) {
+    doc.setFillColor(...GREEN_DARK);
+    doc.rect(M, y, CW, 8, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text(titulo, M + 3, y + 5.5);
+    y += 8;
+
+    items.forEach((item, idx) => {
+      const rowH = 8;
+      doc.setFillColor(idx % 2 === 0 ? 245 : 255, idx % 2 === 0 ? 248 : 255, idx % 2 === 0 ? 242 : 255);
+      doc.rect(M, y, CW, rowH, 'F');
+      doc.setDrawColor(...BORDER_C);
+      doc.setLineWidth(0.2);
+      doc.rect(M, y, CW, rowH);
+
+      doc.setTextColor(...GREEN_DARK);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text(String(idx + 1), M + 4, y + 5.5);
+
+      const maxW = CW - 14;
+      doc.setTextColor(...INK);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8);
+      const wrapped = doc.splitTextToSize(item, maxW);
+      doc.text(wrapped, M + 13, y + 5.5);
+      y += rowH * wrapped.length;
+    });
+    y += 5;
+  }
+
+  tablaDocumentos('DOCUMENTOS REQUERIDOS PARA INSCRIBIRSE AL CURSO', [
+    'Fotocopia de Cédula de Identidad por ambos lados.',
+    'Certificado de Antecedentes para fines especiales (disponible con Clave Única, sin costo).',
+    'Certificado de Estudios — 4° Medio (disponible en Mineduc.cl, sin costo).',
+    'Situación Militar al día. Quienes no tengan su situación militar al día, deben dirigirse a Las Pelargonias 842, Of. 103, Con-Con. Puede comprobar su situación en https://dgmn.cerofilas.gob.cl/',
+  ]);
+
+  tablaDocumentos('DOCUMENTOS A PRESENTAR EN PLATAFORMA SPD PARA OBTENCIÓN DE CREDENCIAL (tramitación personal del Alumno)', [
+    'Certificado psicológico que acredita aptitud para funciones de Seguridad Privada.',
+    'Certificado de aprobación del examen de capacitación, emitido por la Subsecretaría de Prevención del Delito.',
+    'Certificado médico que acredita condiciones físicas compatibles con el cargo de Guardia de Seguridad.',
+    'Declaración Jurada Simple Ley N° 19.327 — "Ley Estadios" sin sanciones.',
+    'Certificado que acredita no haber egresado de las FF.AA. por sanción disciplinaria. Si nunca perteneció a dichas instituciones, presentar Declaración Jurada Simple que señale lo anterior.',
+    'Certificado emitido por institución de no haber ejercido funciones de SSVV por dos años. Si nunca perteneció a FF.AA., Carabineros o Gendarmería, presentar Declaración Jurada Simple indicando lo anterior.',
+    'Declaración Jurada Simple de no haber sido acusado por: Ley de Control de Armas, Tráfico de Estupefacientes, Conductas Terroristas, Lavado de Activos, Seguridad del Estado o Crimen Organizado.',
+  ]);
+
+  /* ── Marco legal tabla 2 columnas ── */
+  doc.setFillColor(...GREEN_DARK);
+  doc.rect(M, y, CW, 8, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text('MARCO LEGAL', M + 3, y + 5.5);
+  y += 8;
+
+  const colW = CW / 2;
+  [
+    ['Ley N° 19.799\nFirma Electrónica', 'Otorga plena validez legal a la firma electrónica simple. El asentimiento expreso del Alumno en la plataforma INASEP equivale jurídicamente a una firma manuscrita.'],
+    ['Ley N° 19.628\nDatos Personales', 'Regula el tratamiento de la información personal. INASEP utiliza los datos exclusivamente para fines administrativos y de capacitación.'],
+  ].forEach((row, ri) => {
+    const rowH = 16;
+    doc.setFillColor(ri % 2 === 0 ? 245 : 255, ri % 2 === 0 ? 248 : 255, ri % 2 === 0 ? 242 : 255);
+    doc.rect(M, y, CW, rowH, 'F');
+    doc.setDrawColor(...BORDER_C); doc.setLineWidth(0.2);
+    doc.rect(M, y, CW, rowH);
+    doc.line(M + colW, y, M + colW, y + rowH);
+    doc.setTextColor(...GREEN_DARK);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+    const keyLines = row[0].split('\n');
+    keyLines.forEach((l, li) => doc.text(l, M + 3, y + 6 + li * 4.5));
+    doc.setTextColor(...INK);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    const valLines = doc.splitTextToSize(row[1], colW - 6);
+    doc.text(valLines, M + colW + 3, y + 6);
+    y += rowH;
+  });
+
+  drawFooter('INASEP SpA · Ley N° 19.799 · Ley N° 19.628 · Chile 2026');
+
+  /* ════════════════════════════════════════════════
+     PÁGINA 3 — COMPROBANTE DE FIRMA CON DATOS DEL ALUMNO
+  ════════════════════════════════════════════════ */
+  doc.addPage();
+  drawHeader('Comprobante de Firma Electrónica · ' + new Date(registro.timestamp).toLocaleString('es-CL',{timeZone:'America/Santiago'}) + ' CLT');
+  y = 36;
+
+  /* ── Bloque código de contrato ── */
+  doc.setFillColor(...INK);
+  doc.roundedRect(M, y, CW, 20, 2, 2, 'F');
+  doc.setTextColor(...GRAY_LT);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+  doc.text('CÓDIGO DE CONTRATO', M + 5, y + 7);
+  doc.setTextColor(...GOLD_LT);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text(registro.contratoId, M + 5, y + 16);
+  doc.setTextColor(26, 160, 80);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+  doc.text('✓ VALIDADO CON ASENTIMIENTO EXPRESO', M + CW - 4, y + 16, {align:'right'});
+  y += 27;
+
+  /* ── Tabla datos del alumno ── */
+  function tablaSimple(titulo, filas, headColor) {
+    const HC = headColor || GREEN_DARK;
+    doc.setFillColor(...HC);
+    doc.rect(M, y, CW, 8, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text(titulo, M + 3, y + 5.5);
+    y += 8;
+
+    filas.forEach((fila, idx) => {
+      const rowH = 8;
+      doc.setFillColor(idx % 2 === 0 ? 249 : 255, idx % 2 === 0 ? 246 : 255, idx % 2 === 0 ? 240 : 255);
+      doc.rect(M, y, CW, rowH, 'F');
+      doc.setDrawColor(...BORDER_C); doc.setLineWidth(0.2);
+      doc.rect(M, y, CW, rowH);
+      doc.line(M + 68, y, M + 68, y + rowH);
+
+      doc.setTextColor(...GRAY);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8);
+      doc.text(fila[0], M + 3, y + 5.5);
+
+      doc.setTextColor(...INK);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.8);
+      const wrapped = doc.splitTextToSize(String(fila[1]), CW - 74);
+      doc.text(wrapped, M + 73, y + 5.5);
+      y += rowH * wrapped.length;
+    });
+    y += 5;
+  }
+
+  tablaSimple('DATOS DEL ALUMNO', [
+    ['Nombre completo', registro.nombre],
+    ['RUT', registro.rut],
+    ['Correo electrónico', registro.email || '— No proporcionado —'],
+    ['Teléfono / WhatsApp', registro.telefono || '— No proporcionado —'],
+  ]);
+
+  tablaSimple('DATOS DEL CONTRATO', [
+    ['Programa / Curso', registro.programa],
+    ['Fecha de suscripción', fechaLarga(registro.fechaContrato)],
+    ['Fecha y hora de registro', new Date(registro.timestamp).toLocaleString('es-CL', {timeZone:'America/Santiago'}) + ' CLT'],
+    ['IP de origen', registro.ip],
+  ]);
+
+  /* ── Tabla asentimientos con checkmarks ── */
+  doc.setFillColor(...GREEN_OK);
+  doc.rect(M, y, CW, 8, 'F');
+  doc.setTextColor(...WHITE);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+  doc.text('DECLARACIONES DE ASENTIMIENTO EXPRESO CONFIRMADAS', M + 3, y + 5.5);
+  y += 8;
+
+  const consentItems = [
+    'He leído íntegramente el contrato de matrícula y comprendo todas sus cláusulas, condiciones y obligaciones.',
+    'Acepto y consiento de manera expresa los términos económicos, académicos y reglamentarios establecidos en el contrato.',
+    'Autorizo a INASEP el tratamiento de mis datos personales conforme a la Ley N° 19.628, exclusivamente para fines académicos y administrativos.',
+    'Entiendo que la validación electrónica tiene plena fuerza legal equivalente a una firma manuscrita, conforme a la Ley N° 19.799.',
+    'Los datos personales ingresados (nombre, RUT, fecha, contacto) son verídicos y corresponden a mi identidad.',
+  ];
+
+  consentItems.forEach((item, idx) => {
+    const baseH = 9;
+    const wrapped = doc.splitTextToSize(item, CW - 18);
+    const rowH = Math.max(baseH, wrapped.length * 4 + 5);
+
+    doc.setFillColor(idx % 2 === 0 ? 240 : 255, idx % 2 === 0 ? 248 : 255, idx % 2 === 0 ? 244 : 255);
+    doc.rect(M, y, CW, rowH, 'F');
+    doc.setDrawColor(...BORDER_C); doc.setLineWidth(0.2);
+    doc.rect(M, y, CW, rowH);
+
+    /* Checkbox verde marcado */
+    doc.setFillColor(...GREEN_OK);
+    doc.roundedRect(M + 3, y + rowH/2 - 3.5, 7, 7, 1, 1, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('✓', M + 4.5, y + rowH/2 + 1.5);
+
+    /* Texto declaración */
+    doc.setTextColor(...INK);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.text(wrapped, M + 14, y + 6);
+    y += rowH;
+  });
+  y += 6;
+
+  /* ── Hash de integridad ── */
+  doc.setFillColor(...INK);
+  doc.roundedRect(M, y, CW, 20, 2, 2, 'F');
+  doc.setTextColor(...GRAY_LT);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
+  doc.text('HASH SHA-256 DE INTEGRIDAD — certifica que este registro no ha sido alterado', M + 4, y + 7);
+  doc.setTextColor(...GOLD_LT);
+  doc.setFont('courier', 'normal'); doc.setFontSize(7);
+  const hashMid = Math.ceil(integridad.length / 2);
+  doc.text(integridad.slice(0, hashMid), M + 4, y + 13);
+  doc.text(integridad.slice(hashMid), M + 4, y + 18);
+  y += 26;
+
+  /* ── Pie legal ── */
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.4);
+  doc.line(M, y, M + CW, y);
+  y += 5;
+
+  doc.setTextColor(...GRAY);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+  const pieText = 'Este documento acredita la validación electrónica del Contrato de Matrícula suscrito con INASEP SpA. La firma electrónica simple tiene plena validez legal conforme a la Ley N° 19.799. Los datos personales son tratados según la Ley N° 19.628.';
+  const pieLines = doc.splitTextToSize(pieText, CW);
+  doc.text(pieLines, M, y);
+
+  drawFooter('INASEP SpA · Ley N° 19.799 · Ley N° 19.628 · Chile · ' + new Date().getFullYear());
+
+  return doc;
+}
+
+/* ═══════════════════════════════════════════════════
+   VISOR PDF.js — funciona en iOS, Android y escritorio
+═══════════════════════════════════════════════════ */
+(function() {
+  const PDF_URL   = 'contrato_matricula.pdf';
+  const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  const WORKER    = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  function renderPDF() {
+    const viewer  = document.getElementById('pdfViewer');
+    const loading = document.getElementById('pdfLoading');
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER;
+
+    pdfjsLib.getDocument(PDF_URL).promise.then(function(pdf) {
+      if (loading) loading.remove();
+
+      // Renderiza todas las páginas una debajo de la otra
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        pdf.getPage(pageNum).then(function(page) {
+          const scale    = window.devicePixelRatio >= 2 ? 2.5 : 2;
+          const viewport = page.getViewport({ scale });
+          const canvas   = document.createElement('canvas');
+          canvas.width   = viewport.width;
+          canvas.height  = viewport.height;
+          viewer.appendChild(canvas);
+          page.render({ canvasContext: canvas.getContext('2d'), viewport });
+        });
+      }
+    }).catch(function(err) {
+      if (loading) loading.innerHTML =
+        '⚠ No se pudo cargar el contrato. <a href="' + PDF_URL + '" target="_blank" style="color:var(--gold)">Abrir PDF ↗</a>';
+      console.warn('PDF.js error:', err);
+    });
+  }
+
+  // Carga PDF.js desde CDN y lanza el render
+  var s = document.createElement('script');
+  s.src = PDFJS_CDN;
+  s.onload = renderPDF;
+  document.head.appendChild(s);
+})();
+
+/* Descarga directa desde botón */
+function descargarPDF() {
+  if (!_pdfBase64) return;
+  const docFinal = generarPDF(
+    { contratoId:S.contratoId, nombre:S.nombre, rut:S.rut,
+       email:S.email, telefono:S.tel, programa:S.prog,
+       fechaContrato:S.fecha, timestamp:S.timestamp, ip:S.ip },
+    _pdfBase64.hash
+  );
+  docFinal.save(`INASEP-Contrato-${S.contratoId}.pdf`);
+}
+
+/* ═══════════════════════════════════════════════════
+   PASO 4→5 — REGISTRAR
+   Guarda en Cloudflare KV + envía emails vía Worker
+═══════════════════════════════════════════════════ */
+async function procesarContrato() {
+  hideAl('al4');
+  const btn = document.getElementById('btn4');
+  btn.disabled = true;
+  document.getElementById('btn4txt').innerHTML = '<span class="spin"></span> Registrando...';
+
+  S.contratoId = genId();
+  S.timestamp  = new Date().toISOString();
+  S.ip         = await getIP();
+
+  const payload    = `${S.nombre}|${S.rut}|${S.fecha}|${S.prog}|${S.email}|${S.tel}|${S.contratoId}|${S.timestamp}`;
+  const integridad = await sha256(payload);
+
+  const registro = {
+    contratoId: S.contratoId, integridad, version: '2.0',
+    nombre: S.nombre, rut: S.rut, fechaContrato: S.fecha, programa: S.prog,
+    email: S.email || null, telefono: S.tel || null,
+    timestamp: S.timestamp, ip: S.ip,
+    userAgent: navigator.userAgent, idioma: navigator.language,
+    consentimientos: {
+      leyoContrato:true, aceptaTerminos:true, autorizaDatos:true,
+      validezLegal:true, datosVeridicos:true
+    },
+    validacionExpresa: true,
+    estadoFirma: 'VALIDADO_CON_ASENTIMIENTO_EXPRESO'
+  };
+
+  /* ── 1. Generar PDF ── */
+  let pdfBase64Only = null;
+  try {
+    const pdfDoc = generarPDF(registro, integridad);
+    pdfBase64Only = pdfDoc.output('datauristring').split(',')[1];
+    _pdfBase64 = { base64: pdfBase64Only, hash: integridad };
+  } catch(e) { console.warn('jsPDF:', e); }
+
+  /* ── 2. Cloudflare Worker → guarda en KV + emails con PDF ── */
+  let guardadoOk    = false;
+  let emailCoorOk   = false;
+  let emailAlumnoOk = false;
+
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pdfBase64:    pdfBase64Only,
+        contratoId:   S.contratoId,
+        integridad,
+        nombre:       S.nombre,
+        rut:          S.rut,
+        email:        S.email  || '',
+        tel:          S.tel    || '',
+        programa:     S.prog,
+        fechaLarga:   fechaLarga(S.fecha),
+        fechaContrato: S.fecha,
+        timestampCL:  new Date(S.timestamp).toLocaleString('es-CL', {timeZone:'America/Santiago'}),
+        ip:           S.ip,
+        userAgent:    navigator.userAgent,
+        consentimientos: registro.consentimientos,
+        estadoFirma:  registro.estadoFirma,
+      })
+    });
+
+    if (resp.ok) {
+      const json = await resp.json();
+      guardadoOk    = json.results?.kv      === true;
+      emailCoorOk   = json.results?.coord   === true;
+      emailAlumnoOk = json.results?.alumno  === true;
+    } else {
+      console.warn('Worker respondió:', resp.status, await resp.text());
+    }
+  } catch(e) { console.warn('Worker error:', e); }
+
+  /* ── 3. Estado de envíos en UI ── */
+  const statusEl  = document.getElementById('emailPDFStatus');
+  const statusMsg = [];
+  if (guardadoOk)                statusMsg.push('✓ Registro guardado en Cloudflare KV');
+  if (emailCoorOk)               statusMsg.push('✓ Copia PDF enviada a coordinacion@inasep.cl');
+  if (emailAlumnoOk)             statusMsg.push(`✓ Comprobante PDF enviado a ${S.email}`);
+  if (!guardadoOk)               statusMsg.push('⚠ No guardado en KV — descarga el PDF');
+  if (!emailCoorOk)              statusMsg.push('⚠ Email a coordinación no enviado — descarga el PDF');
+  if (S.email && !emailAlumnoOk) statusMsg.push('⚠ Email al alumno no enviado — usa el botón de descarga');
+  statusEl.textContent = statusMsg.join('  ·  ');
+  statusEl.style.display = 'block';
+
+  /* ── 4. Pantalla final ── */
+  document.getElementById('summaryBlock').innerHTML = `
+<span class="k">CÓDIGO DE CONTRATO  </span><span class="h">${S.contratoId}</span>
+<span class="k">HASH INTEGRIDAD     </span><span class="v">${integridad.slice(0,32)}…</span>
+<span class="k">NOMBRE              </span><span class="v">${S.nombre}</span>
+<span class="k">RUT                 </span><span class="v">${S.rut}</span>
+<span class="k">FECHA CONTRATO      </span><span class="v">${fechaLarga(S.fecha)}</span>
+<span class="k">PROGRAMA            </span><span class="v">${S.prog}</span>
+<span class="k">CORREO              </span><span class="v">${S.email||'—'}</span>
+<span class="k">TELÉFONO            </span><span class="v">${S.tel||'—'}</span>
+<span class="k">REGISTRO SISTEMA    </span><span class="v">${new Date(S.timestamp).toLocaleString('es-CL',{timeZone:'America/Santiago'})} CLT</span>
+<span class="k">IP ORIGEN           </span><span class="v">${S.ip}</span>
+<span class="k">RESPALDO INASEP     </span><span class="v">${guardadoOk ? '✓ Guardado en Cloudflare KV' : '⚠ Requiere registro manual'}</span>
+<span class="k">EMAIL CON PDF       </span><span class="v">${emailCoorOk ? '✓ Enviado a coordinación' : '⚠ No enviado — descarga manual'}</span>
+<span class="k">ESTADO              </span><span class="h">✓ VALIDADO CON ASENTIMIENTO EXPRESO</span>`;
+
+  setStep(5);
+}
+</script>
+</body>
+</html>
