@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>INASEP — Administración de Contratos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root {
+      --ink:    #0f0e0d;
+      --paper:  #f5f0e8;
+      --cream:  #ede7d6;
+      --gold:   #b8912a;
+      --gold-lt:#d4aa4a;
+      --red:    #8b1a1a;
+      --gray:   #6b6560;
+      --border: #c8bfad;
+      --ok:     #1a5c35;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--paper); color: var(--ink);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--ink); color: var(--paper);
+      padding: 1.2rem 2rem; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 3px solid var(--gold);
+    }
+    .hdr-left { display: flex; align-items: center; gap: 1rem; }
+    .logo { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--gold); }
+    .hdr h1 { font-family: 'Playfair Display', serif; font-size: .95rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+    .hdr p  { font-size: .68rem; color: var(--border); font-family: 'IBM Plex Mono', monospace; margin-top: .15rem; }
+    .user-chip {
+      display: flex; align-items: center; gap: .6rem;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15);
+      padding: .4rem .9rem; border-radius: 20px; cursor: pointer;
+      transition: background .2s;
+    }
+    .user-chip:hover { background: rgba(255,255,255,.15); }
+    .user-chip img { width: 28px; height: 28px; border-radius: 50%; }
+    .user-chip span { font-size: .74rem; color: var(--border); font-family: 'IBM Plex Mono', monospace; }
+
+    /* MAIN */
+    main { flex: 1; max-width: 860px; width: 100%; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+    /* LOGIN SCREEN */
+    #loginScreen {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 60vh; gap: 1.5rem;
+    }
+    .login-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 4px;
+      padding: 2.5rem 3rem; text-align: center; max-width: 420px; width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    }
+    .login-card .logo-big {
+      font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 700;
+      color: var(--gold); display: block; margin-bottom: .25rem;
+    }
+    .login-card h2 {
+      font-family: 'Playfair Display', serif; font-size: 1.15rem;
+      color: var(--ink); margin-bottom: .4rem;
+    }
+    .login-card p { font-size: .8rem; color: var(--gray); margin-bottom: 2rem; line-height: 1.6; }
+    .login-note {
+      font-size: .72rem; color: var(--gray); font-family: 'IBM Plex Mono', monospace;
+      text-align: center; margin-top: .75rem;
+    }
+    #loginError {
+      color: var(--red); font-size: .8rem; margin-top: .75rem;
+      background: #fde8e8; border: 1px solid #f0bebe; border-radius: 3px;
+      padding: .6rem .9rem; display: none;
+    }
+
+    /* DENEGADO */
+    #deniedScreen {
+      display: none; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 60vh; gap: 1rem; text-align: center;
+    }
+    .denied-icon { font-size: 3rem; }
+    #deniedScreen h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--red); }
+    #deniedScreen p  { font-size: .82rem; color: var(--gray); max-width: 400px; line-height: 1.6; }
+
+    /* ADMIN CONTENT */
+    #adminContent { display: none; }
+    #adminContent.visible { display: block; }
+
+    /* SECCIONES */
+    .section {
+      background: #fff; border: 1px solid var(--border); border-radius: 3px;
+      padding: 1.75rem; margin-bottom: 1.25rem;
+    }
+    .section h3 {
+      font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600;
+      color: var(--ink); margin-bottom: 1.25rem; padding-bottom: .5rem;
+      border-bottom: 1px solid var(--cream);
+    }
+
+    /* FORM */
+    .field { margin-bottom: 1.1rem; }
+    label  { display: block; font-size: .72rem; font-weight: 500; text-transform: uppercase;
+             letter-spacing: .06em; color: var(--gray); margin-bottom: .32rem; }
+    input[type=text] {
+      width: 100%; padding: .68rem 1rem;
+      border: 1px solid var(--border); border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace; font-size: .88rem;
+      color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s;
+    }
+    input[type=text]:focus { border-color: var(--gold); background: #fff; }
+    .hint { font-size: .7rem; color: var(--gray); margin-top: .25rem; }
+    .row2 { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; }
+
+    /* BOTONES */
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .72rem 1.6rem; border: none; border-radius: 2px;
+      font-family: 'IBM Plex Sans', sans-serif; font-size: .82rem;
+      font-weight: 500; cursor: pointer; transition: all .2s; letter-spacing: .02em;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-dark  { background: var(--ink); color: var(--paper); }
+    .btn-dark:hover:not(:disabled) { background: #2a2520; }
+    .btn-gold  { background: var(--gold); color: #fff; }
+    .btn-gold:hover:not(:disabled) { background: var(--gold-lt); }
+    .btn-green { background: var(--ok); color: #fff; }
+    .btn-green:hover:not(:disabled) { background: #1e6e3e; }
+    .btn-red   { background: var(--red); color: #fff; }
+    .btn-red:hover:not(:disabled)   { background: #a02020; }
+    .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+    .btn-outline:hover:not(:disabled) { background: var(--gold); color: #fff; }
+    .btn-sm    { padding: .52rem 1.1rem; font-size: .78rem; }
+
+    /* DATOS DEL CONTRATO */
+    .data-grid {
+      display: grid; grid-template-columns: 155px 1fr;
+      gap: .38rem .8rem; align-items: baseline;
+      font-size: .83rem; margin-bottom: 1.25rem;
+    }
+    .dg-key { color: var(--gray); font-weight: 500; font-size: .78rem; }
+    .dg-val { font-family: 'IBM Plex Mono', monospace; color: var(--ink); font-size: .82rem; }
+
+    /* BADGE ESTADO */
+    .badge {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .25rem .85rem; border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+      font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .badge-valido    { background: #e8f5ee; color: var(--ok);  border: 1px solid #b2d9c3; }
+    .badge-cancelado { background: #fde8e8; color: var(--red); border: 1px solid #f0bebe; }
+
+    /* MOTIVO */
+    .motivo-area {
+      width: 100%; padding: .7rem 1rem; border: 1px solid var(--border); border-radius: 2px;
+      font-family: 'IBM Plex Sans', sans-serif; font-size: .85rem; color: var(--ink);
+      background: var(--paper); resize: vertical; min-height: 85px; outline: none;
+      transition: border-color .2s;
+    }
+    .motivo-area:focus { border-color: var(--gold); background: #fff; }
+
+    /* ACCIONES */
+    .action-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.25rem; }
+
+    /* LOG */
+    .log-box {
+      background: var(--ink); border-radius: 2px; padding: 1rem 1.25rem;
+      font-family: 'IBM Plex Mono', monospace; font-size: .73rem;
+      line-height: 1.9; max-height: 210px; overflow-y: auto; margin-top: 1rem;
+      color: var(--border);
+    }
+    .log-ok   { color: #6fcf97; }
+    .log-err  { color: #f08080; }
+    .log-info { color: var(--gold-lt); }
+
+    /* ALERTS */
+    .alert { padding: .7rem 1rem; border-radius: 2px; font-size: .79rem; margin-bottom: .75rem; display: none; }
+    .alert.show { display: block; }
+    .aerr { background: #fde8e8; border-left: 3px solid var(--red); color: var(--red); }
+
+    /* SPINNER */
+    .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: rot .7s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    footer { text-align: center; padding: 1.25rem; font-size: .68rem;
+             font-family: 'IBM Plex Mono', monospace; color: var(--gray);
+             border-top: 1px solid var(--border); }
+
+
+    /* LOGIN EMAIL/PASS */
+    .login-input {
+      width: 100%; padding: .72rem 1rem; margin-bottom: .75rem;
+      border: 1px solid var(--border); border-radius: 2px;
+      font-family: 'IBM Plex Mono', monospace; font-size: .88rem;
+      color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s;
+    }
+    .login-input:focus { border-color: var(--gold); background: #fff; }
+    .btn-login {
+      display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+      width: 100%; background: var(--ink); color: var(--paper);
+      border: none; border-radius: 3px; padding: .9rem 1.75rem;
+      font-size: .88rem; font-weight: 500; cursor: pointer; transition: all .2s;
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: .02em;
+    }
+    .btn-login:hover { background: #2a2520; }
+    .btn-login:disabled { background: var(--border); cursor: not-allowed; }
+
+    /* TOKENS PANEL */
+    .token-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .token-table th {
+      background: var(--ink); color: var(--gold-lt); font-family: 'IBM Plex Mono', monospace;
+      font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+      padding: 7px 10px; text-align: left; font-weight: 500;
+    }
+    .token-table td { padding: 8px 10px; border-bottom: 1px solid var(--cream); vertical-align: middle; }
+    .token-table tr:hover td { background: var(--paper); }
+    .tk-code { font-family: 'IBM Plex Mono', monospace; font-size: .82rem; font-weight: 600; color: var(--ink); letter-spacing: .08em; }
+    .tk-link { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--gray); cursor: pointer; }
+    .tk-link:hover { color: var(--gold); text-decoration: underline; }
+    .badge-pend { background: #fff8e1; color: #7a5c00; border: 1px solid #f0d060; padding: 2px 8px; border-radius: 2px; font-size: .68rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; }
+    .badge-used { background: #e8f5ee; color: var(--ok); border: 1px solid #b2d9c3; padding: 2px 8px; border-radius: 2px; font-size: .68rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; }
+    .badge-exp  { background: #f0f0f0; color: var(--gray); border: 1px solid #d0d0d0; padding: 2px 8px; border-radius: 2px; font-size: .68rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; }
+    .empty-state { text-align: center; padding: 2.5rem; color: var(--gray); font-size: .82rem; font-family: 'IBM Plex Mono', monospace; }
+    .token-copy-btn { background: transparent; border: 1px solid var(--border); border-radius: 2px; padding: .2rem .55rem; font-size: .68rem; cursor: pointer; color: var(--gray); font-family: 'IBM Plex Mono', monospace; transition: all .2s; }
+    .token-copy-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    @media (max-width: 600px) {
+      .row2 { grid-template-columns: 1fr; }
+      main  { padding: 1.25rem 1rem 3rem; }
+      .login-card { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <div class="logo">I</div>
+    <div class="hdr">
+      <h1>Administración de Contratos</h1>
+      <p>INASEP · Panel de coordinación · Uso exclusivo interno</p>
+    </div>
+  </div>
+  <div id="userChip" class="user-chip" style="display:none;" onclick="cerrarSesion()">
+    <img id="userPhoto" src="" alt="" />
+    <span id="userName">—</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══════ PANTALLA LOGIN ══════ -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <span class="logo-big">I</span>
+      <h2>Panel de Coordinación</h2>
+      <p>Acceso restringido a personal autorizado de INASEP.</p>
+      <input class="login-input" type="email"    id="loginEmail" placeholder="correo@inasep.cl"
+             onkeydown="if(event.key==='Enter') loginEmailPass()" autocomplete="username" />
+      <input class="login-input" type="password" id="loginPass"  placeholder="Contraseña"
+             onkeydown="if(event.key==='Enter') loginEmailPass()" autocomplete="current-password" />
+      <button class="btn-login" id="btnLogin" onclick="loginEmailPass()">
+        🔐 Iniciar sesión
+      </button>
+      <div id="loginError"></div>
+      <p class="login-note">Solo cuentas autorizadas por INASEP tienen acceso.</p>
+    </div>
+  </div>
+
+  <!-- ══════ ACCESO DENEGADO ══════ -->
+  <div id="deniedScreen">
+    <div class="denied-icon">🔒</div>
+    <h2>Acceso denegado</h2>
+    <p id="deniedMsg">Tu cuenta no tiene permisos para acceder a este panel.</p>
+    <button class="btn btn-dark" style="margin-top:.5rem" onclick="cerrarSesion()">
+      Cerrar sesión e intentar con otra cuenta
+    </button>
+  </div>
+
+  <!-- ══════ PANEL ADMIN ══════ -->
+  <div id="adminContent">
+
+    <!-- BUSCAR CONTRATO -->
+    <div class="section">
+      <h3>🔍 Buscar contrato</h3>
+      <div class="row2">
+        <div class="field" style="margin-bottom:0">
+          <label>Código de contrato</label>
+          <input type="text" id="adm-id" placeholder="INS-XXXXXXXX-XXXX"
+                 oninput="this.value=this.value.toUpperCase()"
+                 onkeydown="if(event.key==='Enter') admBuscar()" />
+          <div class="hint">Ingresa el código exacto del contrato y presiona Buscar</div>
+        </div>
+        <button class="btn btn-dark" onclick="admBuscar()" id="btnBuscar">Buscar →</button>
+      </div>
+      <div id="al-adm" class="alert aerr"></div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="section" id="resultSection" style="display:none;">
+      <h3>📋 Datos del contrato</h3>
+      <div class="data-grid" id="dataGrid"></div>
+
+      <div class="field">
+        <label>Motivo del cambio <span style="color:var(--red)">*</span></label>
+        <textarea class="motivo-area" id="adm-motivo"
+          placeholder="Ej: Inscripción duplicada — el alumno se inscribió dos veces al mismo curso.
+Ej: Error en RUT — datos incorrectos al momento de llenar el formulario.
+Ej: Solicitud de anulación por parte del alumno vía WhatsApp.
+Ej: Reactivación — la cancelación fue un error administrativo."></textarea>
+        <div class="hint">Obligatorio · Queda registrado en el sistema y en el PDF.</div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-green btn-sm" onclick="admCambiarEstado('VALIDO')" id="btnValidar">
+          ✔ Marcar como VÁLIDO
+        </button>
+        <button class="btn btn-red btn-sm" onclick="admCambiarEstado('CANCELADO')" id="btnCancelar">
+          ✖ CANCELAR contrato
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="admDescargarPDF()" id="btnAdmPDF" style="display:none;">
+          📄 Descargar PDF del cambio
+        </button>
+      </div>
+
+      <div class="log-box" id="admLog">
+        <span class="log-info">— Contrato cargado. Ingresa el motivo y elige una acción. —</span>
+      </div>
+    </div>
+
+
+    <!-- GESTIÓN DE TOKENS -->
+    <div class="section">
+      <h3>🔑 Tokens de acceso — Formulario de matrícula</h3>
+
+      <!-- Crear token -->
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.85rem;align-items:end;margin-bottom:1.25rem;" id="tokenFormGrid">
+        <div class="field" style="margin-bottom:0">
+          <label>Nombre del alumno</label>
+          <input type="text" id="tk-alumno" placeholder="Nombre completo del alumno" />
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Programa / Curso</label>
+          <input type="text" id="tk-prog" placeholder="Ej: Curso Formación GG.SS OS10" />
+        </div>
+        <button class="btn btn-gold" onclick="crearToken()" id="btnCrearToken">
+          + Generar enlace
+        </button>
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label>Nota interna (opcional)</label>
+        <input type="text" id="tk-nota" placeholder="Ej: Grupo marzo 2025 · Sede Quilpué" />
+      </div>
+
+      <!-- Resultado del token recién creado -->
+      <div id="tokenResult" style="display:none;background:var(--ink);color:var(--gold-lt);font-family:'IBM Plex Mono',monospace;font-size:.78rem;padding:1rem 1.25rem;border-radius:2px;margin-bottom:1rem;line-height:2;">
+        <div style="color:var(--border);font-size:.7rem;margin-bottom:.4rem;">ENLACE GENERADO — válido por 24 horas · uso único</div>
+        <div id="tokenResultLink" style="word-break:break-all;color:#e8dcc8;"></div>
+        <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button class="token-copy-btn" onclick="copiarToken()">📋 Copiar enlace</button>
+          <button class="token-copy-btn" onclick="abrirWhatsApp()">📲 Enviar por WhatsApp</button>
+        </div>
+      </div>
+
+      <div id="al-token" class="alert aerr"></div>
+
+      <!-- Tabla de tokens -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <span style="font-size:.78rem;color:var(--gray);font-family:'IBM Plex Mono',monospace;" id="tokenCount">Cargando…</span>
+        <button class="btn btn-dark" style="padding:.42rem 1rem;font-size:.76rem;" onclick="cargarTokens()">↻ Actualizar</button>
+      </div>
+      <div id="tokenTableWrap">
+        <div class="empty-state">Cargando tokens…</div>
+      </div>
+    </div>
+
+  </div><!-- /adminContent -->
+
+</main>
+
+<footer>
+  INASEP · Panel de Coordinación · Uso exclusivo interno · <span id="yr"></span>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════
+     FIREBASE AUTH
+══════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyA0Uls6Te3scv4iF-5AcKQkc7tQVXq2xz0",
+  authDomain:        "inasep-contratos.firebaseapp.com",
+  projectId:         "inasep-contratos",
+  storageBucket:     "inasep-contratos.firebasestorage.app",
+  messagingSenderId: "947153429430",
+  appId:             "1:947153429430:web:bbec23c4f3230457ab9717"
+};
+
+// ── LISTA BLANCA DE CORREOS AUTORIZADOS ──────────────────────────────
+const ADMINS_AUTORIZADOS = [
+  "coordinacion.inasep@gmail.com",
+  "coordinacion@inasep.cl",
+  // agrega más correos si es necesario
+];
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.loginEmailPass = async function() {
+  const email  = document.getElementById('loginEmail').value.trim();
+  const pass   = document.getElementById('loginPass').value;
+  const errEl  = document.getElementById('loginError');
+  const btn    = document.getElementById('btnLogin');
+  errEl.style.display = 'none';
+
+  if (!email || !pass) {
+    errEl.textContent = 'Ingresa tu correo y contraseña.';
+    errEl.style.display = 'block'; return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Verificando…';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    const msgs = {
+      'auth/user-not-found':   'Correo no registrado en el sistema.',
+      'auth/wrong-password':   'Contraseña incorrecta.',
+      'auth/invalid-email':    'Correo no tiene formato válido.',
+      'auth/too-many-requests':'Demasiados intentos. Espera unos minutos.',
+      'auth/invalid-credential': 'Credenciales inválidas. Verifica correo y contraseña.',
+    };
+    errEl.textContent = msgs[e.code] || ('Error: ' + e.message);
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔐 Iniciar sesión';
+  }
+};
+
+window.cerrarSesion = async function() {
+  await signOut(auth);
+};
+
+onAuthStateChanged(auth, (user) => {
+  const loginScreen  = document.getElementById('loginScreen');
+  const deniedScreen = document.getElementById('deniedScreen');
+  const adminContent = document.getElementById('adminContent');
+  const userChip     = document.getElementById('userChip');
+  const userName     = document.getElementById('userName');
+
+  if (!user) {
+    loginScreen.style.display  = 'flex';
+    deniedScreen.style.display = 'none';
+    adminContent.classList.remove('visible');
+    userChip.style.display = 'none';
+    return;
+  }
+
+  const email      = (user.email || '').toLowerCase();
+  const autorizado = ADMINS_AUTORIZADOS.map(e => e.toLowerCase()).includes(email);
+  loginScreen.style.display = 'none';
+
+  if (!autorizado) {
+    deniedScreen.style.display = 'flex';
+    document.getElementById('deniedMsg').textContent =
+      `La cuenta "${user.email}" no está autorizada. Contacta al administrador.`;
+    adminContent.classList.remove('visible');
+    userChip.style.display = 'none';
+    return;
+  }
+
+  deniedScreen.style.display = 'none';
+  adminContent.classList.add('visible');
+  userChip.style.display = 'flex';
+  // No hay foto en email/pass — mostrar inicial
+  document.getElementById('userPhoto').style.display = 'none';
+  userName.textContent = user.email;
+
+  // Cargar tokens al entrar
+  cargarTokens();
+});
+</script>
+
+<!-- ══════════════════════════════════════════════════════
+     LÓGICA DEL PANEL ADMIN
+══════════════════════════════════════════════════════ -->
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+/* ═══════════════════════════════════════════════════
+   GESTIÓN DE TOKENS DE ACCESO
+═══════════════════════════════════════════════════ */
+const BASE_URL_FORMULARIO = 'https://inasep.cl/contrato/'; // ← ajusta a tu URL real
+
+let _tokenRecien = null; // último token generado
+
+function showAlToken(msg) {
+  const el = document.getElementById('al-token');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideAlToken() {
+  document.getElementById('al-token').classList.remove('show');
+}
+
+async function crearToken() {
+  hideAlToken();
+  const alumno  = document.getElementById('tk-alumno').value.trim();
+  const prog    = document.getElementById('tk-prog').value.trim();
+  const nota    = document.getElementById('tk-nota').value.trim();
+
+  if (!alumno || !prog) {
+    showAlToken('Debes ingresar el nombre del alumno y el programa.');
+    return;
+  }
+
+  const btn = document.getElementById('btnCrearToken');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando…';
+
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-INASEP-Secret': SECRET },
+      body: JSON.stringify({ action: 'create_token', alumno, programa: prog, nota, creadoPor: 'coordinacion' })
+    });
+    const json = await resp.json();
+    if (!json.ok) throw new Error(json.error || 'Error al crear token');
+
+    _tokenRecien = json.token;
+    const link = BASE_URL_FORMULARIO + '?t=' + json.token;
+    document.getElementById('tokenResultLink').textContent = link;
+    document.getElementById('tokenResult').style.display = 'block';
+    log(`✓ Token generado: ${json.token} — Alumno: ${alumno}`, 'ok');
+
+    // Limpiar form y recargar tabla
+    document.getElementById('tk-alumno').value = '';
+    document.getElementById('tk-prog').value   = '';
+    document.getElementById('tk-nota').value   = '';
+    cargarTokens();
+
+  } catch(e) {
+    showAlToken('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Generar enlace';
+  }
+}
+
+function copiarToken() {
+  const link = document.getElementById('tokenResultLink').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    log('✓ Enlace copiado al portapapeles.', 'ok');
+  }).catch(() => {
+    prompt('Copia este enlace:', link);
+  });
+}
+
+function abrirWhatsApp() {
+  const link = document.getElementById('tokenResultLink').textContent;
+  const msg  = encodeURIComponent(
+    '📋 *INASEP — Contrato de Matrícula*\n\n' +
+    'Haz clic en el siguiente enlace para leer y suscribir tu contrato.\n' +
+    'El enlace es personal y tiene validez de 24 horas:\n\n' + link
+  );
+  window.open('https://wa.me/?text=' + msg, '_blank');
+}
+
+async function cargarTokens() {
+  const wrap = document.getElementById('tokenTableWrap');
+  const count = document.getElementById('tokenCount');
+  wrap.innerHTML = '<div class="empty-state">Cargando…</div>';
+
+  try {
+    const resp = await fetch(
+      WORKER_URL + '?action=list_tokens',
+      { headers: { 'X-INASEP-Secret': SECRET } }
+    );
+    const json = await resp.json();
+    if (!json.ok) throw new Error(json.error);
+
+    const tokens = json.tokens || [];
+    const now    = Date.now();
+    count.textContent = `${tokens.length} token(s) en el sistema`;
+
+    if (!tokens.length) {
+      wrap.innerHTML = '<div class="empty-state">No hay tokens generados todavía.</div>';
+      return;
+    }
+
+    const rows = tokens.map(tk => {
+      const esPend = !tk.usado && now <= tk.expira;
+      const esUsed = tk.usado;
+      const esExp  = !tk.usado && now > tk.expira;
+
+      const badge = esPend
+        ? '<span class="badge-pend">Pendiente</span>'
+        : esUsed
+        ? '<span class="badge-used">Usado</span>'
+        : '<span class="badge-exp">Expirado</span>';
+
+      const expiraTxt = new Date(tk.expira).toLocaleString('es-CL', { timeZone: 'America/Santiago' });
+      const creadoTxt = new Date(tk.creadoEn).toLocaleString('es-CL', { timeZone: 'America/Santiago' });
+      const usadoTxt  = tk.usadoEn
+        ? new Date(tk.usadoEn).toLocaleString('es-CL', { timeZone: 'America/Santiago' })
+        : '—';
+
+      const link = BASE_URL_FORMULARIO + '?t=' + tk.token;
+
+      return `<tr>
+        <td><span class="tk-code">${tk.token}</span></td>
+        <td>${tk.alumno || '—'}</td>
+        <td style="font-size:.76rem">${tk.programa || '—'}</td>
+        <td>${badge}</td>
+        <td style="font-size:.72rem;color:var(--gray)">${creadoTxt}</td>
+        <td style="font-size:.72rem;color:var(--gray)">${expiraTxt}</td>
+        <td style="font-size:.72rem;color:var(--gray)">${usadoTxt}</td>
+        <td style="font-size:.72rem;color:var(--gray)">${tk.contratoId || '—'}</td>
+        <td>
+          ${esPend ? `<button class="token-copy-btn" onclick="copiarLinkToken('${link}')">Copiar enlace</button>` : ''}
+          <button class="token-copy-btn" style="margin-left:.3rem;" onclick="eliminarToken('${tk.token}')">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="token-table">
+          <thead><tr>
+            <th>Token</th><th>Alumno</th><th>Programa</th><th>Estado</th>
+            <th>Creado</th><th>Expira</th><th>Usado el</th><th>Contrato</th><th>Acción</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state" style="color:var(--red)">Error al cargar tokens: ' + e.message + '</div>';
+    count.textContent = '';
+  }
+}
+
+function copiarLinkToken(link) {
+  navigator.clipboard.writeText(link).then(() => {
+    log('✓ Enlace copiado.', 'ok');
+  }).catch(() => prompt('Copia este enlace:', link));
+}
+
+async function eliminarToken(token) {
+  if (!confirm('¿Eliminar el token ' + token + '? Esta acción no se puede deshacer.')) return;
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-INASEP-Secret': SECRET },
+      body: JSON.stringify({ action: 'delete_token', token })
+    });
+    const json = await resp.json();
+    if (json.ok) { log('✓ Token eliminado.', 'ok'); cargarTokens(); }
+    else throw new Error(json.error);
+  } catch(e) {
+    log('⚠ Error al eliminar: ' + e.message, 'err');
+  }
+}
+
+// Exponer al scope global
+window.crearToken    = crearToken;
+window.copiarToken   = copiarToken;
+window.abrirWhatsApp = abrirWhatsApp;
+window.cargarTokens  = cargarTokens;
+window.copiarLinkToken = copiarLinkToken;
+window.eliminarToken = eliminarToken;
+
+
+const WORKER_URL = 'https://inasep-email-worker.inasep.workers.dev/';
+const SECRET     = 'Cjq6LDI07v9CDqm1pWSPiIC8gvuAKCPB';
+
+let _registro  = null;   // contrato actualmente cargado
+let _pdfDoc    = null;   // PDF del último cambio
+let _pdfNombre = null;
+
+/* ── LOG ─────────────────────────────────────────────────────────── */
+function log(msg, tipo = 'info') {
+  const el  = document.getElementById('admLog');
+  const ts  = new Date().toLocaleTimeString('es-CL');
+  const cls = tipo === 'ok' ? 'log-ok' : tipo === 'err' ? 'log-err' : 'log-info';
+  el.innerHTML += `\n<span class="${cls}">[${ts}] ${msg}</span>`;
+  el.scrollTop  = el.scrollHeight;
+}
+
+function showAl(msg) {
+  const el = document.getElementById('al-adm');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideAl() {
+  document.getElementById('al-adm').classList.remove('show');
+}
+
+/* ── BUSCAR CONTRATO ─────────────────────────────────────────────── */
+async function admBuscar() {
+  hideAl();
+  const id = document.getElementById('adm-id').value.trim();
+  if (!id) { showAl('Ingresa el código del contrato.'); return; }
+
+  const btn = document.getElementById('btnBuscar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Buscando...';
+
+  try {
+    const resp = await fetch(
+      `${WORKER_URL}?action=get&id=${encodeURIComponent(id)}`,
+      { headers: { 'X-INASEP-Secret': SECRET } }
+    );
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+
+    if (!json.data) {
+      showAl('No se encontró ningún contrato con ese código.');
+      document.getElementById('resultSection').style.display = 'none';
+      return;
+    }
+
+    _registro = json.data;
+    renderDatos(_registro);
+
+  } catch(e) {
+    showAl('Error al consultar el Worker: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar →';
+  }
+}
+
+/* ── RENDERIZAR DATOS ────────────────────────────────────────────── */
+function renderDatos(r) {
+  const estadoActual = r.estadoFirma || 'VALIDADO_CON_ASENTIMIENTO_EXPRESO';
+  const cancelado    = estadoActual.includes('CANCELADO');
+  const badgeCls     = cancelado ? 'badge-cancelado' : 'badge-valido';
+  const badgeLbl     = cancelado ? '✖ CANCELADO' : '✔ VÁLIDO';
+
+  document.getElementById('dataGrid').innerHTML = `
+    <span class="dg-key">Código</span>      <span class="dg-val">${r.contratoId || '—'}</span>
+    <span class="dg-key">Nombre</span>      <span class="dg-val">${r.nombre     || '—'}</span>
+    <span class="dg-key">RUT</span>         <span class="dg-val">${r.rut        || '—'}</span>
+    <span class="dg-key">Programa</span>    <span class="dg-val">${r.programa   || '—'}</span>
+    <span class="dg-key">Correo</span>      <span class="dg-val">${r.email      || '—'}</span>
+    <span class="dg-key">Teléfono</span>    <span class="dg-val">${r.telefono   || '—'}</span>
+    <span class="dg-key">Fecha contrato</span> <span class="dg-val">${r.fechaContrato || '—'}</span>
+    <span class="dg-key">Registro sistema</span>
+    <span class="dg-val">${r.timestamp ? new Date(r.timestamp).toLocaleString('es-CL',{timeZone:'America/Santiago'}) + ' CLT' : '—'}</span>
+    <span class="dg-key">Estado actual</span>
+    <span class="dg-val"><span class="badge ${badgeCls}">${badgeLbl}</span></span>
+    ${r.motivoCambio ? `<span class="dg-key">Último motivo</span><span class="dg-val">${r.motivoCambio}</span>` : ''}
+    ${r.fechaCambio  ? `<span class="dg-key">Última modificación</span>
+      <span class="dg-val">${new Date(r.fechaCambio).toLocaleString('es-CL',{timeZone:'America/Santiago'})} CLT</span>` : ''}
+  `;
+
+  document.getElementById('admLog').innerHTML =
+    '<span class="log-ok">✓ Contrato cargado. Ingresa el motivo y elige una acción.</span>';
+  document.getElementById('btnAdmPDF').style.display = 'none';
+  document.getElementById('adm-motivo').value = '';
+  document.getElementById('resultSection').style.display = 'block';
+  _pdfDoc = null;
+}
+
+/* ── CAMBIAR ESTADO ──────────────────────────────────────────────── */
+async function admCambiarEstado(nuevoEstado) {
+  if (!_registro) return;
+
+  const motivo = document.getElementById('adm-motivo').value.trim();
+  if (!motivo) {
+    log('⚠ Debes escribir el motivo antes de continuar.', 'err');
+    document.getElementById('adm-motivo').focus();
+    return;
+  }
+
+  const btnV = document.getElementById('btnValidar');
+  const btnC = document.getElementById('btnCancelar');
+  btnV.disabled = true; btnC.disabled = true;
+
+  const estadoFirma = nuevoEstado === 'CANCELADO'
+    ? 'CANCELADO_POR_COORDINACION'
+    : 'VALIDADO_CON_ASENTIMIENTO_EXPRESO';
+
+  const fechaCambio = new Date().toISOString();
+
+  log(`Procesando cambio a ${nuevoEstado}...`, 'info');
+
+  // 1. Generar PDF del cambio
+  let pdfBase64 = null;
+  try {
+    _pdfDoc    = generarPDFCambio(_registro, nuevoEstado, motivo, fechaCambio);
+    pdfBase64  = _pdfDoc.output('datauristring').split(',')[1];
+    _pdfNombre = `INASEP-${_registro.contratoId}-${nuevoEstado}.pdf`;
+    log('✓ PDF del cambio generado.', 'ok');
+  } catch(e) {
+    log('⚠ No se pudo generar el PDF: ' + e.message, 'err');
+  }
+
+  // 2. Enviar al Worker
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type':   'application/json',
+        'X-INASEP-Secret': SECRET
+      },
+      body: JSON.stringify({
+        action:        'update_estado',
+        contratoId:    _registro.contratoId,
+        estadoFirma,
+        motivoCambio:  motivo,
+        fechaCambio,
+        pdfBase64,
+        nombre:        _registro.nombre,
+        rut:           _registro.rut,
+        email:         _registro.email || '',
+        programa:      _registro.programa,
+        nuevoEstado,
+      })
+    });
+
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.results?.kv)     log('✓ KV actualizado en Cloudflare.', 'ok');
+      else                      log('⚠ KV no confirmó — guarda el PDF como respaldo.', 'err');
+      if (json.results?.coord)  log('✓ Notificación enviada a coordinacion.inasep@gmail.com.', 'ok');
+      if (json.results?.alumno) log(`✓ Notificación enviada al alumno (${_registro.email}).`, 'ok');
+      if (_registro.email && !json.results?.alumno)
+                                log('⚠ No se pudo enviar email al alumno.', 'err');
+    } else {
+      log('⚠ Worker respondió HTTP ' + resp.status + '. Descarga el PDF manualmente.', 'err');
+    }
+  } catch(e) {
+    log('⚠ No se pudo conectar al Worker: ' + e.message, 'err');
+  }
+
+  // 3. Actualizar UI con nuevo estado
+  _registro = {
+    ..._registro,
+    estadoFirma, motivoCambio: motivo, fechaCambio,
+    modificadoPor: 'COORDINACION_INASEP'
+  };
+  renderDatos(_registro);
+  document.getElementById('adm-motivo').value = motivo; // mantener motivo visible
+
+  if (_pdfDoc) document.getElementById('btnAdmPDF').style.display = 'inline-flex';
+  log(`Estado cambiado a ${nuevoEstado}. Proceso finalizado.`, 'ok');
+
+  btnV.disabled = false; btnC.disabled = false;
+}
+
+/* ── DESCARGAR PDF ───────────────────────────────────────────────── */
+function admDescargarPDF() {
+  if (_pdfDoc && _pdfNombre) _pdfDoc.save(_pdfNombre);
+}
+
+/* ── GENERAR PDF DEL CAMBIO ──────────────────────────────────────── */
+function generarPDFCambio(r, nuevoEstado, motivo, fechaCambio) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'letter' });
+  const M   = 20, PW = 216, CW = PW - M*2;
+  let y = M;
+
+  const cancelado   = nuevoEstado === 'CANCELADO';
+  const colorBanner = cancelado ? [139,26,26] : [26,92,53];
+  const labelBanner = cancelado ? 'CONTRATO CANCELADO' : 'CONTRATO REACTIVADO — VÁLIDO';
+
+  // Encabezado
+  doc.setFillColor(15,14,13);
+  doc.rect(0, 0, PW, 26, 'F');
+  doc.setTextColor(184,145,42);
+  doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text('INASEP', M, 11);
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.setTextColor(200,191,173);
+  doc.text('Actualización de Estado de Contrato · Coordinación INASEP', M, 18);
+  doc.text(new Date(fechaCambio).toLocaleString('es-CL',{timeZone:'America/Santiago'}) + ' CLT', M, 23);
+  y = 36;
+
+  // Banner estado
+  doc.setFillColor(...colorBanner);
+  doc.rect(M, y, CW, 11, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.text(labelBanner, PW/2, y+7.5, { align:'center' });
+  y += 19;
+
+  // Datos del contrato
+  doc.setTextColor(15,14,13);
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('DATOS DEL CONTRATO', M, y); y += 5;
+  doc.setDrawColor(200,191,173); doc.line(M, y, M+CW, y); y += 5;
+
+  const filas = [
+    ['Código de contrato', r.contratoId        || '—'],
+    ['Nombre alumno',      r.nombre             || '—'],
+    ['RUT',               r.rut                || '—'],
+    ['Programa',          r.programa           || '—'],
+    ['Correo',            r.email              || '—'],
+    ['Teléfono',          r.telefono           || '—'],
+    ['Fecha suscripción', r.fechaContrato       || '—'],
+    ['Registro original', r.timestamp
+      ? new Date(r.timestamp).toLocaleString('es-CL',{timeZone:'America/Santiago'}) + ' CLT'
+      : '—'],
+  ];
+
+  doc.setFontSize(8.2);
+  filas.forEach(([k, v]) => {
+    doc.setFont('helvetica','bold');   doc.setTextColor(107,101,96); doc.text(k + ':', M, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,14,13);   doc.text(String(v), M+55, y);
+    y += 5.5;
+  });
+
+  y += 3;
+
+  // Motivo
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(15,14,13);
+  doc.text('MOTIVO DEL CAMBIO', M, y); y += 5;
+  doc.setDrawColor(200,191,173); doc.line(M, y, M+CW, y); y += 5;
+  doc.setFontSize(8.2); doc.setFont('helvetica','normal');
+  const lines = doc.splitTextToSize(motivo, CW);
+  doc.text(lines, M, y); y += lines.length * 5 + 4;
+
+  // Registro del cambio
+  doc.setFontSize(8.5); doc.setFont('helvetica','bold'); doc.setTextColor(15,14,13);
+  doc.text('REGISTRO DEL CAMBIO', M, y); y += 5;
+  doc.setDrawColor(200,191,173); doc.line(M, y, M+CW, y); y += 5;
+  doc.setFontSize(8.2); doc.setFont('helvetica','normal');
+
+  const cambioFilas = [
+    ['Fecha y hora',      new Date(fechaCambio).toLocaleString('es-CL',{timeZone:'America/Santiago'}) + ' CLT'],
+    ['Modificado por',    'Coordinación INASEP'],
+    ['Estado anterior',   'VALIDADO_CON_ASENTIMIENTO_EXPRESO'],
+    ['Estado nuevo',      cancelado ? 'CANCELADO_POR_COORDINACION' : 'VALIDADO_CON_ASENTIMIENTO_EXPRESO'],
+  ];
+  cambioFilas.forEach(([k, v]) => {
+    doc.setFont('helvetica','bold');   doc.setTextColor(107,101,96); doc.text(k + ':', M, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,14,13);   doc.text(String(v), M+42, y);
+    y += 5.5;
+  });
+
+  y += 5;
+
+  // Pie
+  doc.setDrawColor(200,191,173); doc.line(M, y, M+CW, y); y += 5;
+  doc.setFontSize(7); doc.setTextColor(107,101,96); doc.setFont('helvetica','normal');
+  doc.text('INASEP SpA · RUT 77.776.479-9 · Aníbal Pinto 875 Of. C, Quilpué · coordinacion@inasep.cl', PW/2, y, { align:'center' });
+  y += 4;
+  doc.text('Documento generado automáticamente por el sistema de contratos INASEP', PW/2, y, { align:'center' });
+
+  return doc;
+}
+
+// Exponer al scope global (necesario para los onclick del HTML)
+window.admBuscar        = admBuscar;
+window.admCambiarEstado = admCambiarEstado;
+window.admDescargarPDF  = admDescargarPDF;
+</script>
+
+</body>
+</html>
